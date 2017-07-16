@@ -1,0 +1,113 @@
+---
+title: "Reproducible Data Project 1"
+author: "Rick Flake"
+date: "2017-07-16 07:49:35"
+---
+
+
+```{r echo=TRUE, message=TRUE}
+# include this code chunk as-is to set options
+knitr::opts_chunk$set(comment=NA, prompt=TRUE)
+library(Rcmdr)
+library(car)
+library(RcmdrMisc)
+library(mice)
+library(data.table)
+library(chron)
+library(ggplot2)
+```
+
+
+```{r echo=TRUE, message=TRUE}
+# include this code chunk as-is to enable 3D graphs
+library(rgl)
+knitr::knit_hooks$set(webgl = hook_webgl)
+```
+1) Code for reading in the dataset and/or processing the data
+*Download data zip file from https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip
+*Extract activity data file to local drive
+*Run the following code to load data
+
+
+```{r echo=TRUE, message=TRUE}
+activity <- 
+  read.table("C:/Users/Rick/Documents/Coursera/Reproducible Research/activity.csv",
+   header=TRUE, sep=",", na.strings="NA", dec=".", strip.white=TRUE)
+```
+2) Histogram of the total number of steps taken each day
+
+```{r echo=TRUE, message=TRUE}
+activity <- data.table(activity)
+setkey(activity,date)
+dactivity <- as.data.frame(activity[, sum(steps, na.rm = TRUE),by = date])
+names(dactivity)[c(2)] <- c("steps")
+with(dactivity, Hist(steps, scale="frequency", breaks="Sturges", col="darkgray"))
+```
+3) Mean and median number of steps taken each day
+
+```{r echo=TRUE, message=TRUE}
+meanday <- with(dactivity,mean(steps))
+medianday <- with(dactivity,median(steps))
+mactivity <- as.data.frame(activity[, mean(steps, na.rm = TRUE),by = date])
+mdactivity <- as.data.frame(activity[, median(steps, na.rm = TRUE),by = date])
+names(mactivity)[c(2)] <- c("meansteps")
+names(mdactivity)[c(2)] <- c("mediansteps")
+stactivity <-merge(mactivity,mdactivity,all.x = TRUE)
+stactivity
+```
+Mean of days is `r meanday` and Median of days is `r medianday`.
+
+
+4) Time series plot of the average number of steps taken
+
+```{r echo=TRUE, message=TRUE}
+with(activity, plotMeans(steps, date, error.bars="none", connect=TRUE))
+```
+
+5) The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r echo=TRUE, message=TRUE}
+setkey(activity,interval)
+iactivity <- as.data.frame(activity[, mean(steps, na.rm = TRUE),by = interval])
+names(iactivity)[c(2)] <- c("steps")
+subset(iactivity,steps == max(steps))
+```
+
+6) Code to describe and show a strategy for imputing missing data
+
+```{r echo=TRUE, message=TRUE}
+# calculating imputed data. It uses linear reqression against the existing values
+library(mice)
+imactivity <- mice(data = activity, m = 5, method = "pmm", maxit = 5, seed = 500)
+#completing data using the 2nd of 5 result sets
+completeactivity <- complete(imactivity,2)
+completeactivity
+```
+
+7) Histogram of the total number of steps taken each day after missing values are imputed
+
+```{r echo=TRUE, message=TRUE}
+completeactivity <- data.table(completeactivity)
+setkey(completeactivity,date)
+dcompactivity <- as.data.frame(completeactivity[, sum(steps, na.rm = TRUE),by = date])
+names(dcompactivity)[c(2)] <- c("steps")
+with(dcompactivity, Hist(steps, scale="frequency", breaks="Sturges", col="darkgray"))
+```
+
+8) Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends. 
+
+
+```{r}
+library(chron)
+completeactivity1 <- completeactivity[,daynum:=wday(date)]
+completeactivity1[,weekend:=is.weekend(date)]
+ Ciactivity <- as.data.frame(completeactivity1[, mean(steps, na.rm = TRUE),keyby = .(interval,weekend)])
+names(Ciactivity)[c(3)] <- c("meansteps")
+Ciactivity <- data.table(Ciactivity)
+Ciactivity$weekend <- replace(Ciactivity$weekend,Ciactivity$weekend =='TRUE','Weekend')
+Ciactivity$weekend <- replace(Ciactivity$weekend,Ciactivity$weekend =='FALSE','Weekday')
+library(lattice)
+xyplot(data=Ciactivity, meansteps~interval|weekend, type ='l',layout = c(1,2))
+```
+
+
