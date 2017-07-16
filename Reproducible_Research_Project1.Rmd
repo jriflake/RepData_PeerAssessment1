@@ -2,6 +2,10 @@
 title: "Reproducible Data Project 1"
 author: "Rick Flake"
 date: "2017-07-16 07:49:35"
+output: 
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
 ---
 
 
@@ -53,7 +57,7 @@ mdactivity <- as.data.frame(activity[, median(steps, na.rm = TRUE),by = date])
 names(mactivity)[c(2)] <- c("meansteps")
 names(mdactivity)[c(2)] <- c("mediansteps")
 stactivity <-merge(mactivity,mdactivity,all.x = TRUE)
-stactivity
+
 ```
 Mean of days is `r meanday` and Median of days is `r medianday`.
 
@@ -81,7 +85,7 @@ library(mice)
 imactivity <- mice(data = activity, m = 5, method = "pmm", maxit = 5, seed = 500)
 #completing data using the 2nd of 5 result sets
 completeactivity <- complete(imactivity,2)
-completeactivity
+
 ```
 
 7) Histogram of the total number of steps taken each day after missing values are imputed
